@@ -2,8 +2,9 @@ import time
 import threading
 import csv
 import os
-from datetime import datetime
 import Adafruit_DHT
+import RPi.GPIO as GPIO
+from datetime import datetime
 
 # Sensor Pins for 3 Pots
 DHT11_PIN_POT1 = 4
@@ -13,11 +14,29 @@ DHT22_PIN_POT2 = 22
 DHT11_PIN_POT3 = 10
 DHT22_PIN_POT3 = 9
 
+SOIL_PIN_POT1 = 5
+SOIL_PIN_POT2 = 6
+SOIL_PIN_POT3 = 13
+
+LIGHT_PIN_POT1 = 19
+LIGHT_PIN_POT2 = 26
+LIGHT_PIN_POT3 = 21
+
+# Setup GPIO
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(SOIL_PIN_POT1, GPIO.IN)
+GPIO.setup(SOIL_PIN_POT2, GPIO.IN)
+GPIO.setup(SOIL_PIN_POT3, GPIO.IN)
+
+GPIO.setup(LIGHT_PIN_POT1, GPIO.IN)
+GPIO.setup(LIGHT_PIN_POT2, GPIO.IN)
+GPIO.setup(LIGHT_PIN_POT3, GPIO.IN)
+
 # Thresholds for dynamic duty cycling
 TEMP_THRESHOLD = 0.5  # Temperature change threshold (degrees Celsius)
 HUMIDITY_THRESHOLD = 1.0  # Humidity change threshold (%)
-SOIL_THRESHOLD = 50  # Soil moisture raw reading threshold
-LIGHT_THRESHOLD = 100  # Light intensity raw reading threshold
+SOIL_THRESHOLD = 1  # Digital soil sensor (binary change)
+LIGHT_THRESHOLD = 1  # Digital light sensor (binary change)
 
 # Global variables for storing the previous readings for dynamic duty cycling
 prev_dht11 = [(None, None)] * 3
@@ -30,15 +49,13 @@ def read_dht(sensor_type, pin):
     humidity, temperature = Adafruit_DHT.read_retry(sensor_type, pin)
     return temperature, humidity
 
-# Simulated function to read digital capacitive soil moisture sensor (Returns a random reading)
-def read_soil_moisture(pot_number):
-    # Replace this with actual reading code for digital soil sensor
-    return 300  # Simulated moisture value
+# Function to read digital capacitive soil moisture sensor
+def read_soil_moisture(pin):
+    return GPIO.input(pin)
 
-# Simulated function to read digital light sensor (Returns a random reading)
-def read_light_intensity(pot_number):
-    # Replace this with actual reading code for digital light sensor
-    return 500  # Simulated light value
+# Function to read digital light sensor
+def read_light_intensity(pin):
+    return GPIO.input(pin)
 
 # Function to calculate averages of sensor readings from 3 pots
 def average_readings(readings):
@@ -76,13 +93,13 @@ def gather_sensor_data():
                           read_dht(Adafruit_DHT.DHT22, DHT22_PIN_POT2),
                           read_dht(Adafruit_DHT.DHT22, DHT22_PIN_POT3)]
         
-        soil_readings = [read_soil_moisture(1), 
-                         read_soil_moisture(2), 
-                         read_soil_moisture(3)]
+        soil_readings = [read_soil_moisture(SOIL_PIN_POT1), 
+                         read_soil_moisture(SOIL_PIN_POT2), 
+                         read_soil_moisture(SOIL_PIN_POT3)]
         
-        light_readings = [read_light_intensity(1), 
-                          read_light_intensity(2), 
-                          read_light_intensity(3)]
+        light_readings = [read_light_intensity(LIGHT_PIN_POT1), 
+                          read_light_intensity(LIGHT_PIN_POT2), 
+                          read_light_intensity(LIGHT_PIN_POT3)]
 
         # Averaging the readings from all 3 pots
         avg_dht11_temp = average_readings([r[0] for r in dht11_readings])
